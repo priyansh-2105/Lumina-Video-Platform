@@ -60,32 +60,6 @@ export default function CreatorLayout({
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 z-40">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <Tabs value={activeTab} onValueChange={() => {}} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-transparent">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <TabsTrigger
-                      key={tab.id}
-                      value={tab.id}
-                      asChild
-                      className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                    >
-                      <Link href={`/creator?tab=${tab.id}`} className="flex items-center gap-2 px-3 py-2">
-                        <Icon className="h-4 w-4" />
-                        <span className="hidden sm:inline">{tab.label}</span>
-                      </Link>
-                    </TabsTrigger>
-                  )
-                })}
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-
         {/* Content */}
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {children}
