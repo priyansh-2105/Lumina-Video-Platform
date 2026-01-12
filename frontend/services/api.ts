@@ -52,6 +52,11 @@ async function apiFetch<T>(
     throw new Error("Unauthorized")
   }
 
+  if (res.status === 403) {
+    // 403 means user is authenticated but forbidden - don't clear auth data
+    throw new Error("Forbidden")
+  }
+
   if (!res.ok) {
     let message = `Request failed (${res.status})`
     try {
@@ -155,8 +160,12 @@ export const commentService = {
 }
 
 export const historyService = {
-  async getHistory(userId: string): Promise<WatchHistoryItem[]> {
-    return apiFetch(`/users/history/${encodeURIComponent(userId)}`, undefined, { auth: true })
+  async getHistory(): Promise<WatchHistoryItem[]> {
+    return apiFetch(`/users/history/me`, undefined, { auth: true })
+  },
+
+  async clearHistory(): Promise<void> {
+    return apiFetch(`/users/history/me`, { method: "DELETE" }, { auth: true })
   },
 
   async saveProgress(videoId: string, progress: number): Promise<WatchHistoryItem> {
@@ -172,10 +181,6 @@ export const historyService = {
       { auth: true },
     )
   },
-
-  async clearHistory(userId: string): Promise<void> {
-    await apiFetch(`/users/history/${encodeURIComponent(userId)}`, { method: "DELETE" }, { auth: true })
-  },
 }
 
 export const creatorService = {
@@ -188,5 +193,31 @@ export const creatorService = {
       if (e instanceof Error && e.message.toLowerCase().includes("not found")) return null
       throw e
     }
+  },
+}
+
+export const userService = {
+  async subscribe(creatorId: string): Promise<{ success: boolean; subscribersCount: number; isSubscribed: boolean }> {
+    return apiFetch(
+      `/users/${encodeURIComponent(creatorId)}/subscribe`,
+      { method: "POST" },
+      { auth: true }
+    )
+  },
+
+  async unsubscribe(creatorId: string): Promise<{ success: boolean; subscribersCount: number; isSubscribed: boolean }> {
+    return apiFetch(
+      `/users/${encodeURIComponent(creatorId)}/unsubscribe`,
+      { method: "POST" },
+      { auth: true }
+    )
+  },
+
+  async getSubscriptions(): Promise<{ subscriptions: User[]; count: number }> {
+    return apiFetch("/users/me/subscriptions", undefined, { auth: true })
+  },
+
+  async getSubscriptionsFeed(): Promise<Video[]> {
+    return apiFetch("/videos/subscriptions-feed", undefined, { auth: true })
   },
 }

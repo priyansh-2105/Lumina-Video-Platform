@@ -5,7 +5,7 @@ A professional, clean, and fully functional frontend for a Video Streaming Platf
 ## Features
 
 ### Authentication
-- JWT-based authentication (mock implementation ready for backend integration)
+- JWT-based authentication
 - Role-based access control (Viewer / Creator)
 - Protected routes with automatic redirects
 
@@ -86,7 +86,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 /contexts
   auth-context.tsx    # Authentication state
 /services
-  api.ts              # API service layer (mock data)
+  api.ts              # API service layer
 /types
   index.ts            # TypeScript interfaces
 /utils
@@ -111,7 +111,7 @@ The frontend is designed to work with these REST endpoints:
 | GET | /api/users/history | Get watch history |
 | GET | /api/creators/:id/videos | Get creator's videos |
 
-Currently uses mock data for demonstration. Replace the API service layer to connect to your backend.
+The frontend connects to your backend API for all data operations.
 
 ## Demo Accounts
 

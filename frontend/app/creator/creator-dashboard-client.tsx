@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadForm } from "@/components/upload-form"
+import { AnalyticsTab } from "@/components/analytics-tab"
+import { SettingsTab } from "@/components/settings-tab"
 import { useRouter } from "next/navigation"
 import type { Video as VideoType } from "@/types"
 
@@ -117,19 +119,11 @@ export function CreatorDashboardClient({ initialVideos, activeTab }: CreatorDash
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-4">
-          <div className="text-center py-12">
-            <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Analytics</h3>
-            <p className="text-muted-foreground">Analytics dashboard coming soon</p>
-          </div>
+          <AnalyticsTab videos={initialVideos} />
         </TabsContent>
         
         <TabsContent value="settings" className="space-y-4">
-          <div className="text-center py-12">
-            <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Settings</h3>
-            <p className="text-muted-foreground">Settings panel coming soon</p>
-          </div>
+          <SettingsTab />
         </TabsContent>
       </Tabs>
     </div>

@@ -4,12 +4,13 @@ import { VideoPlayer } from "@/components/video-player"
 import { LikeDislikeButton } from "@/components/like-dislike-button"
 import { CommentInput } from "@/components/comment-input"
 import { CommentList } from "@/components/comment-list"
-import { videoService } from "@/services/api"
+import { SubscribeButton, SubscriberCount } from "@/components/subscribe-button"
+import { videoService, userService, creatorService } from "@/services/api"
 import { formatViews, formatDistanceToNow } from "@/utils/format"
 import type { Video, Comment } from "@/types"
 import Link from "next/link"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface VideoClientProps {
   video: Video
@@ -20,6 +21,28 @@ interface VideoClientProps {
 export function VideoClient({ video, relatedVideos, comments: initialComments }: VideoClientProps) {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [views, setViews] = useState(video.views)
+  const [creatorData, setCreatorData] = useState<{
+    isSubscribed?: boolean
+    subscribersCount?: number
+  }>({})
+
+  useEffect(() => {
+    const loadCreatorData = async () => {
+      try {
+        const creator = await creatorService.getCreator(video.creatorId)
+        if (creator) {
+          setCreatorData({
+            isSubscribed: (creator as any).isSubscribed || false,
+            subscribersCount: (creator as any).subscribersCount || 0
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load creator data:', error)
+      }
+    }
+
+    loadCreatorData()
+  }, [video.creatorId])
 
   const handleFirstPlay = async () => {
     try {
@@ -50,29 +73,35 @@ export function VideoClient({ video, relatedVideos, comments: initialComments }:
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
               {/* Creator Info */}
-              <Link href={`/channel/${video.creatorId}`} className="flex items-center gap-3">
-                <div className="h-10 w-10 overflow-hidden rounded-full bg-secondary">
-                  {video.creatorAvatar ? (
-                    <Image
-                      src={video.creatorAvatar || "/placeholder.svg"}
-                      alt={video.creatorName}
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">
-                      {video.creatorName.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium hover:text-primary transition-colors">{video.creatorName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatViews(views)} views • {formatDistanceToNow(video.createdAt)}
-                  </p>
-                </div>
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link href={`/channel/${video.creatorId}`} className="flex items-center gap-3 flex-1">
+                  <div className="h-10 w-10 overflow-hidden rounded-full bg-secondary">
+                    {video.creatorAvatar ? (
+                      <Image
+                        src={video.creatorAvatar || "/placeholder.svg"}
+                        alt={video.creatorName}
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">
+                        {video.creatorName.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium hover:text-primary transition-colors">{video.creatorName}</p>
+                    <SubscriberCount count={creatorData.subscribersCount || 0} />
+                  </div>
+                </Link>
+                <SubscribeButton
+                  creatorId={video.creatorId}
+                  initialSubscribed={creatorData.isSubscribed}
+                  initialSubscribersCount={creatorData.subscribersCount}
+                  size="sm"
+                />
+              </div>
 
               {/* Like/Dislike Buttons */}
               <LikeDislikeButton videoId={video.id} initialLikes={video.likes} initialDislikes={video.dislikes} />

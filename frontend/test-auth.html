@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Authentication</title>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function checkAuth() {
+            const token = localStorage.getItem('lumina_token');
+            const user = localStorage.getItem('lumina_user');
+            
+            results.innerHTML = `
+                <h2>Current Auth State:</h2>
+                <p><strong>Has Token:</strong> ${!!token}</p>
+                <p><strong>Token Length:</strong> ${token ? token.length : 0}</p>
+                <p><strong>Token Preview:</strong> ${token ? token.substring(0, 50) + '...' : 'none'}</p>
+                <p><strong>Has User:</strong> ${!!user}</p>
+                <p><strong>User Data:</strong> ${user || 'none'}</p>
+                
+                <button onclick="clearAuth()">Clear Auth Data</button>
+                <button onclick="testAPI()">Test API Call</button>
+            `;
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('lumina_token');
+            localStorage.removeItem('lumina_user');
+            checkAuth();
+        }
+        
+        async function testAPI() {
+            const token = localStorage.getItem('lumina_token');
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/users/history/me', {
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : 'none'
+                    }
+                });
+                
+                results.innerHTML += `
+                    <h3>API Test Result:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>OK:</strong> ${response.ok}</p>
+                `;
+            } catch (error) {
+                results.innerHTML += `
+                    <h3>API Test Error:</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        checkAuth();
+    </script>
+</body>
+</html>

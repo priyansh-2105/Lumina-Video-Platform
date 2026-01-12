@@ -50,14 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Restore from token first (authoritative), fallback to stored user.
     if (storedToken) {
       try {
-        const payload = decodeJwtPayload(storedToken)
-        setState({ user: payload as any, isAuthenticated: true, isLoading: false })
+        const payload = decodeJwtPayload(storedToken) as any
+        setState({ user: payload, isAuthenticated: true, isLoading: false })
         return
-      } catch {
+      } catch (err: any) {
+        console.log("Token decode failed:", err?.message || 'Unknown error')
+        // Clear stale auth data but don't auto-redirect
         localStorage.removeItem("lumina_token")
         localStorage.removeItem("lumina_user")
         setState({ user: null, isAuthenticated: false, isLoading: false })
-        router.replace("/login")
         return
       }
     }
@@ -77,17 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handler = () => {
+      // Clear auth data but don't auto-redirect - let components handle it
       localStorage.removeItem("lumina_user")
       localStorage.removeItem("lumina_token")
       setState({ user: null, isAuthenticated: false, isLoading: false })
-      router.replace("/login")
     }
 
     window.addEventListener("lumina:unauthorized", handler)
     return () => {
       window.removeEventListener("lumina:unauthorized", handler)
     }
-  }, [router])
+  }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     const { token, user } = await authService.login(email, password)

@@ -170,12 +170,22 @@ app.get("/api/users/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).lean();
     if (!user) return res.status(404).json({ message: "User not found" });
+    
+    // Check if current user is subscribed to this creator
+    let isSubscribed = false;
+    if (req.user) {
+      const currentUser = await User.findById(req.user.id);
+      isSubscribed = currentUser?.subscriptions?.includes(user._id) || false;
+    }
+    
     res.json({
       id: user._id.toString(),
       name: user.name,
       avatar: user.avatar,
       description: user.description,
       role: user.role,
+      subscribersCount: user.subscribersCount || 0,
+      isSubscribed,
       createdAt: user.createdAt.toISOString(),
     });
   } catch (err) {
@@ -528,6 +538,16 @@ app.post("/api/videos/:id/comment", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/api/users/history/me", requireAuth, async (req, res) => {
+  try {
+    const history = await WatchHistory.find({ userId: req.user.id }).sort({ watchedAt: -1 }).lean();
+    res.json(history);
+  } catch (err) {
+    console.error("Fetch history error:", err);
+    res.status(500).json({ message: "Failed to fetch history" });
+  }
+});
+
 app.get("/api/users/history/:userId", requireAuth, async (req, res) => {
   if (String(req.user.id) !== String(req.params.userId)) {
     return res.status(403).json({ message: "Forbidden" });
@@ -547,6 +567,16 @@ app.delete("/api/users/history/:userId", requireAuth, async (req, res) => {
   }
   try {
     await WatchHistory.deleteMany({ userId: req.params.userId });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Clear history error:", err);
+    res.status(500).json({ message: "Failed to clear history" });
+  }
+});
+
+app.delete("/api/users/history/me", requireAuth, async (req, res) => {
+  try {
+    await WatchHistory.deleteMany({ userId: req.user.id });
     res.json({ success: true });
   } catch (err) {
     console.error("Clear history error:", err);
@@ -596,6 +626,135 @@ app.post("/api/videos/:id/progress", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Save progress error:", err);
     res.status(500).json({ message: "Failed to save progress" });
+  }
+});
+
+app.post("/api/users/:creatorId/subscribe", requireAuth, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.creatorId)) {
+      return res.status(400).json({ message: "Invalid creator ID" });
+    }
+
+    const creatorId = req.params.creatorId;
+    const userId = req.user.id;
+
+    // Don't allow self-subscription
+    if (creatorId === userId) {
+      return res.status(400).json({ message: "Cannot subscribe to yourself" });
+    }
+
+    // Check if creator exists
+    const creator = await User.findById(creatorId);
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+    // Get current user
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check if already subscribed
+    if (user.subscriptions?.includes(creatorId)) {
+      return res.status(400).json({ message: "Already subscribed" });
+    }
+
+    // Add subscription
+    await User.findByIdAndUpdate(userId, {
+      $push: { subscriptions: creatorId }
+    });
+
+    // Increment creator's subscriber count
+    await User.findByIdAndUpdate(creatorId, {
+      $inc: { subscribersCount: 1 }
+    });
+
+    res.json({ 
+      success: true, 
+      subscribersCount: (creator.subscribersCount || 0) + 1,
+      isSubscribed: true 
+    });
+  } catch (err) {
+    console.error("Subscribe error:", err);
+    res.status(500).json({ message: "Failed to subscribe" });
+  }
+});
+
+app.post("/api/users/:creatorId/unsubscribe", requireAuth, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.creatorId)) {
+      return res.status(400).json({ message: "Invalid creator ID" });
+    }
+
+    const creatorId = req.params.creatorId;
+    const userId = req.user.id;
+
+    // Check if creator exists
+    const creator = await User.findById(creatorId);
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+    // Get current user
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check if subscribed
+    if (!user.subscriptions?.includes(creatorId)) {
+      return res.status(400).json({ message: "Not subscribed" });
+    }
+
+    // Remove subscription
+    await User.findByIdAndUpdate(userId, {
+      $pull: { subscriptions: creatorId }
+    });
+
+    // Decrement creator's subscriber count (don't go below 0)
+    const newCount = Math.max(0, (creator.subscribersCount || 0) - 1);
+    await User.findByIdAndUpdate(creatorId, {
+      $set: { subscribersCount: newCount }
+    });
+
+    res.json({ 
+      success: true, 
+      subscribersCount: newCount,
+      isSubscribed: false 
+    });
+  } catch (err) {
+    console.error("Unsubscribe error:", err);
+    res.status(500).json({ message: "Failed to unsubscribe" });
+  }
+});
+
+app.get("/api/users/me/subscriptions", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('subscriptions', 'name avatar role subscribersCount');
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      subscriptions: user.subscriptions || [],
+      count: user.subscriptions?.length || 0
+    });
+  } catch (err) {
+    console.error("Get subscriptions error:", err);
+    res.status(500).json({ message: "Failed to fetch subscriptions" });
+  }
+});
+
+app.get("/api/videos/subscriptions-feed", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const subscriptions = user.subscriptions || [];
+    if (subscriptions.length === 0) {
+      return res.json([]);
+    }
+
+    // Get videos from subscribed creators
+    const videos = await Video.find({ 
+      creatorId: { $in: subscriptions }
+    }).sort({ createdAt: -1 }).lean();
+
+    res.json(videos.map(ensureVideoShape));
+  } catch (err) {
+    console.error("Subscriptions feed error:", err);
+    res.status(500).json({ message: "Failed to fetch subscriptions feed" });
   }
 });
 

@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Play, Trash2, LogOut, Clock, User } from "lucide-react"
 import { Navbar } from "@/components/navbar"
-import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -26,25 +24,30 @@ import { formatDuration, formatDistanceToNow } from "@/utils/format"
 import type { WatchHistoryItem } from "@/types"
 
 export default function ProfilePage() {
-  const router = useRouter()
   const { user, logout } = useAuth()
   const [history, setHistory] = useState<WatchHistoryItem[]>([])
   const [showClearDialog, setShowClearDialog] = useState(false)
 
   useEffect(() => {
+    // Only load history if user is available
     if (!user) return
-
-    const userId = user.id
 
     let isMounted = true
 
     async function load() {
       try {
-        const watchHistory = await historyService.getHistory(userId)
+        const watchHistory = await historyService.getHistory()
         if (isMounted) setHistory(watchHistory)
       } catch (e) {
-        if (e instanceof Error && e.message === "Unauthorized") return
+        // Don't show errors for auth issues - just set empty history
+        if (e instanceof Error && (e.message === "Unauthorized" || e.message === "Forbidden")) {
+          // Don't clear auth data here - let API service handle token cleanup
+          // Just show empty history
+          if (isMounted) setHistory([]) // Show empty history instead of error
+          return
+        }
         console.error("Failed to load watch history", e)
+        if (isMounted) setHistory([]) // Show empty history on other errors too
       }
     }
 
@@ -56,17 +59,22 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logout()
-    router.push("/")
+    window.location.href = "/"
   }
 
   const handleClearHistory = async () => {
     if (!user) return
 
     try {
-      await historyService.clearHistory(user.id)
+      await historyService.clearHistory()
       setHistory([])
     } catch (e) {
-      if (e instanceof Error && e.message === "Unauthorized") return
+      // Handle auth errors silently
+      if (e instanceof Error && (e.message === "Unauthorized" || e.message === "Forbidden")) {
+        // Don't clear auth data here - let API service handle token cleanup
+        setHistory([]) // Show empty history
+        return
+      }
       console.error("Failed to clear watch history", e)
     } finally {
       setShowClearDialog(false)
@@ -79,13 +87,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        <Navbar />
+    <div className="min-h-screen bg-background">
+      <Navbar />
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          {/* Profile Section */}
-          <Card className="mb-8 bg-card border-border">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Profile Section */}
+        <Card className="mb-8 bg-card border-border">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <Avatar className="h-24 w-24">
@@ -217,6 +224,5 @@ export default function ProfilePage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </ProtectedRoute>
-  )
+    )
 }

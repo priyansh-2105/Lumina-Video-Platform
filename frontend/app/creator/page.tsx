@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { CreatorDashboardClient } from "./creator-dashboard-client"
 import { getCreatorVideos } from "@/services/video-service"
@@ -8,10 +8,15 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import type { Video } from "@/types"
 
-export default function CreatorPage() {
+function SearchParamsWrapper({ children }: { children: (tab: string) => React.JSX.Element }) {
+  const searchParams = useSearchParams()
+  const tab = searchParams.get("tab") || "videos"
+  return children(tab)
+}
+
+function CreatorPageContent() {
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [initialVideos, setInitialVideos] = useState<Video[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -44,7 +49,17 @@ export default function CreatorPage() {
     return <div>Loading...</div>
   }
 
-  const tab = searchParams.get("tab") || "videos"
-
-  return <CreatorDashboardClient initialVideos={initialVideos} activeTab={tab} />
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchParamsWrapper>
+        {(tab) => <CreatorDashboardClient initialVideos={initialVideos} activeTab={tab} />}
+      </SearchParamsWrapper>
+    </Suspense>
+  )
 }
+
+export default function CreatorPage() {
+  return <CreatorPageContent />
+}
+
+export const dynamic = 'force-dynamic'

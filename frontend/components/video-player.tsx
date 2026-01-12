@@ -26,7 +26,11 @@ export function VideoPlayer({ video, onFirstPlay }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [hasStarted, setHasStarted] = useState(false)
+  const [videoError, setVideoError] = useState(false)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Check if video URL is valid (not placeholder)
+  const isValidVideoUrl = video.videoUrl && !video.videoUrl.includes('/placeholder.')
 
   // Load saved progress
   useEffect(() => {
@@ -169,20 +173,36 @@ export function VideoPlayer({ video, onFirstPlay }: VideoPlayerProps) {
       onMouseMove={resetControlsTimeout}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
-      <video
-        ref={videoRef}
-        src={video.videoUrl}
-        className="w-full h-full object-contain"
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onClick={handlePlayPause}
-        crossOrigin="anonymous"
-      />
+      {!isValidVideoUrl || videoError ? (
+        // Show placeholder when video URL is invalid or video fails to load
+        <div className="w-full h-full flex items-center justify-center bg-muted">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+              <Play className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground">Video not available</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {video.title}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <video
+          ref={videoRef}
+          src={video.videoUrl}
+          className="w-full h-full object-contain"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onError={() => setVideoError(true)}
+          onClick={handlePlayPause}
+          crossOrigin="anonymous"
+        />
+      )}
 
-      {/* Play button overlay */}
-      {!isPlaying && (
+      {/* Play button overlay - only show for valid videos */}
+      {!isPlaying && isValidVideoUrl && !videoError && (
         <button
           onClick={handlePlayPause}
           className="absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity"
@@ -194,12 +214,13 @@ export function VideoPlayer({ video, onFirstPlay }: VideoPlayerProps) {
         </button>
       )}
 
-      {/* Controls */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity ${
-          showControls ? "opacity-100" : "opacity-0"
-        }`}
-      >
+      {/* Controls - only show for valid videos */}
+      {isValidVideoUrl && !videoError && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity ${
+            showControls ? "opacity-100" : "opacity-0"
+          }`}
+        >
         {/* Progress bar */}
         <div className="mb-4">
           <Slider
@@ -252,7 +273,8 @@ export function VideoPlayer({ video, onFirstPlay }: VideoPlayerProps) {
             {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
           </Button>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

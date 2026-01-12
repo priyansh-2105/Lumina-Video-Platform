@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Auth Data</title>
+</head>
+<body>
+    <h1>Clearing Authentication Data...</h1>
+    <script>
+        // Clear all Lumina auth data
+        localStorage.removeItem('lumina_token');
+        localStorage.removeItem('lumina_user');
+        
+        // Also clear any other potential auth data
+        sessionStorage.clear();
+        
+        document.body.innerHTML = '<h1>✅ Auth data cleared!</h1><p>You can now refresh the page and log in fresh.</p>';
+        
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+            window.location.href = 'http://localhost:3000/login';
+        }, 2000);
+    </script>
+</body>
+</html>
