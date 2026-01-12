@@ -260,7 +260,7 @@ export function VideoPlayer({ video, onFirstPlay }: VideoPlayerProps) {
             </div>
 
             <span className="text-sm text-foreground">
-              {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration))}
+              {formatDuration(Math.floor(currentTime))} / {duration && duration > 0 ? formatDuration(Math.floor(duration)) : '0:00'}
             </span>
           </div>
 

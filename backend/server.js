@@ -25,12 +25,7 @@ connectDB().then(() => {
   process.exit(1);
 });
 
-// Require models after DB is connected
-const User = require("./models/User");
-const Video = require("./models/Video");
-const Comment = require("./models/Comment");
-const WatchHistory = require("./models/WatchHistory");
-const Reaction = require("./models/Reaction");
+// Models already imported above
 
 const app = express();
 app.use(cors());
@@ -379,6 +374,13 @@ app.post(
       duration: duration, // Use extracted duration
     });
 
+    // Validate duration before saving
+    if (!duration || duration <= 0) {
+      return res.status(400).json({ 
+        message: "Invalid video duration. Please ensure the video file is valid." 
+      });
+    }
+
     try {
       await video.save();
       const savedVideo = await Video.findById(video._id).lean();
@@ -407,6 +409,11 @@ app.post(
 
 app.get("/api/videos/:id/thumbnail", async (req, res) => {
   try {
+    // Add CORS headers
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "Invalid video ID" });
     }
@@ -419,7 +426,19 @@ app.get("/api/videos/:id/thumbnail", async (req, res) => {
     }
     const stat = fs.statSync(video.thumbnailPath);
     const readStream = fs.createReadStream(video.thumbnailPath);
-    res.setHeader("Content-Type", "image/jpeg");
+    
+    // Set correct content type based on file extension
+    const ext = path.extname(video.thumbnailPath).toLowerCase();
+    if (ext === '.png') {
+      res.setHeader("Content-Type", "image/png");
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      res.setHeader("Content-Type", "image/jpeg");
+    } else if (ext === '.webp') {
+      res.setHeader("Content-Type", "image/webp");
+    } else {
+      res.setHeader("Content-Type", "image/jpeg"); // fallback
+    }
+    
     res.setHeader("Content-Length", stat.size);
     readStream.pipe(res);
   } catch (err) {
@@ -639,7 +658,10 @@ app.post("/api/videos/:id/comment", requireAuth, async (req, res) => {
 
 app.get("/api/users/history/me", requireAuth, async (req, res) => {
   try {
-    const history = await WatchHistory.find({ userId: req.user.id }).sort({ watchedAt: -1 }).lean();
+    const history = await WatchHistory.find({ userId: req.user.id })
+      .populate('videoId', 'title thumbnail duration creatorId creatorName')
+      .sort({ watchedAt: -1 })
+      .lean();
     res.json(history);
   } catch (err) {
     console.error("Fetch history error:", err);
@@ -652,7 +674,10 @@ app.get("/api/users/history/:userId", requireAuth, async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
   try {
-    const history = await WatchHistory.find({ userId: req.params.userId }).sort({ watchedAt: -1 }).lean();
+    const history = await WatchHistory.find({ userId: req.params.userId })
+      .populate('videoId', 'title thumbnail duration creatorId creatorName')
+      .sort({ watchedAt: -1 })
+      .lean();
     res.json(history);
   } catch (err) {
     console.error("Fetch history error:", err);
@@ -704,7 +729,6 @@ app.post("/api/videos/:id/progress", requireAuth, async (req, res) => {
       videoId: req.params.id,
       progress,
       watchedAt: new Date(),
-      video: ensureVideoShape(video.toObject()),
     };
 
     if (existing) {

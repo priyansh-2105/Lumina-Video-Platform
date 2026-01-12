@@ -39,8 +39,7 @@ export interface Comment {
 
 export interface WatchHistoryItem {
   id: string
-  videoId: string
-  video: Video
+  videoId: string | Video  // Can be string ID or populated Video object
   progress: number
   watchedAt: string
 }

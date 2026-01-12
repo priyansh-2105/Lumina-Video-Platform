@@ -83,8 +83,10 @@ export default function ProfilePage() {
   }
 
   const getProgressPercentage = (item: WatchHistoryItem) => {
-    if (!item.video.duration) return 0
-    return Math.min((item.progress / item.video.duration) * 100, 100)
+    const video = typeof item.videoId === 'object' ? item.videoId : null;
+    const safeDuration = video?.duration && video.duration > 0 ? video.duration : null;
+    if (!safeDuration) return 0;
+    return Math.min((item.progress / safeDuration) * 100, 100);
   }
 
   return (
@@ -158,51 +160,64 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {history.map((item) => (
-                    <div key={item.id || `${item.videoId}-${item.watchedAt}`} className="flex gap-4 rounded-lg border border-border bg-secondary/50 p-3">
-                      <Link href={`/video/${item.videoId}`} className="flex-shrink-0">
-                        <div className="relative h-24 w-40 overflow-hidden rounded-lg bg-secondary">
-                          <Image
-                            src={item.video.thumbnail || "/placeholder.svg"}
-                            alt={item.video.title}
-                            fill
-                            className="object-cover"
-                          />
-                          {/* Progress bar */}
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-background/50">
-                            <div className="h-full bg-primary" style={{ width: `${getProgressPercentage(item)}%` }} />
+                  {history.map((item) => {
+                    const video = typeof item.videoId === 'object' ? item.videoId : null;
+                    const videoIdString = typeof item.videoId === 'object' ? item.videoId._id : (typeof item.videoId === 'string' ? item.videoId : '');
+                    
+                    return (
+                      <div key={item.id || `${videoIdString}-${item.watchedAt}`} className="flex gap-4 rounded-lg border border-border bg-secondary/50 p-3">
+                        <Link href={`/video/${videoIdString}`} className="flex-shrink-0">
+                          <div className="relative h-24 w-40 overflow-hidden rounded-lg bg-secondary">
+                            <Image
+                              src={video?.thumbnail || "/placeholder.svg"}
+                              alt={video?.title || ""}
+                              fill
+                              className="object-cover"
+                              onError={(e) => {
+                                console.error("Thumbnail load error:", video?.thumbnail);
+                              }}
+                              onLoadingComplete={() => {
+                                console.log("Thumbnail loaded successfully:", video?.thumbnail);
+                              }}
+                            />
+                            {/* Progress bar */}
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-background/50">
+                              <div className="h-full bg-primary" style={{ width: `${getProgressPercentage(item)}%` }} />
+                            </div>
+                          </div>
+                        </Link>
+
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/video/${videoIdString}`}>
+                            <h3 className="font-medium leading-tight line-clamp-2 hover:text-primary transition-colors">
+                              {video?.title}
+                            </h3>
+                          </Link>
+                          <Link
+                            href={`/channel/${video?.creatorId}`}
+                            className="mt-1 block text-sm text-muted-foreground hover:text-foreground"
+                          >
+                            {video?.creatorName}
+                          </Link>
+                          <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>Watched {formatDistanceToNow(item.watchedAt)}</span>
+                            {video?.duration && video.duration > 0 && (
+                              <span>
+                                {formatDuration(Math.floor(item.progress))} / {formatDuration(video.duration)}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      </Link>
 
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/video/${item.videoId}`}>
-                          <h3 className="font-medium leading-tight line-clamp-2 hover:text-primary transition-colors">
-                            {item.video.title}
-                          </h3>
-                        </Link>
-                        <Link
-                          href={`/channel/${item.video.creatorId}`}
-                          className="mt-1 block text-sm text-muted-foreground hover:text-foreground"
-                        >
-                          {item.video.creatorName}
-                        </Link>
-                        <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Watched {formatDistanceToNow(item.watchedAt)}</span>
-                          <span>
-                            {formatDuration(Math.floor(item.progress))} / {formatDuration(item.video.duration)}
-                          </span>
-                        </div>
+                        <Button variant="outline" size="sm" asChild className="flex-shrink-0 self-center bg-transparent">
+                          <Link href={`/video/${videoIdString}`}>
+                            <Play className="mr-2 h-4 w-4" />
+                            Resume
+                          </Link>
+                        </Button>
                       </div>
-
-                      <Button variant="outline" size="sm" asChild className="flex-shrink-0 self-center bg-transparent">
-                        <Link href={`/video/${item.videoId}`}>
-                          <Play className="mr-2 h-4 w-4" />
-                          Resume
-                        </Link>
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
