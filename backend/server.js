@@ -1,14 +1,21 @@
 require("dotenv").config();
 
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
+const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegStatic = require("ffmpeg-static");
 const connectDB = require("./config/db");
+const User = require("./models/User");
+const Video = require("./models/Video");
+const Comment = require("./models/Comment");
+const WatchHistory = require("./models/WatchHistory");
+const Reaction = require("./models/Reaction");
 
 // Initialize DB before anything else
 connectDB().then(() => {
@@ -58,18 +65,53 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Function to extract video duration using ffprobe
+// Set ffmpeg path to use static version
+ffmpeg.setFfmpegPath(ffmpegStatic);
+
+// Function to extract video duration using ffmpeg
 async function getVideoDuration(videoPath) {
   return new Promise((resolve, reject) => {
-    exec(`ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${videoPath}"`, (error, stdout) => {
-      if (error) {
-        console.error("Error getting video duration:", error);
-        reject(error);
+    ffmpeg.ffprobe(videoPath, (err, metadata) => {
+      if (err) {
+        // Fallback to using exec with static ffmpeg
+        const ffmpegPath = path.join(__dirname, 'node_modules', 'ffmpeg-static', 'ffmpeg.exe');
+        exec(`"${ffmpegPath}" -i "${videoPath}"`, (error, stdout, stderr) => {
+          // ffmpeg outputs to stderr when getting file info
+          const output = stderr;
+          
+          // Parse duration from stderr
+          const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+          if (durationMatch) {
+            const hours = parseInt(durationMatch[1]);
+            const minutes = parseInt(durationMatch[2]);
+            const seconds = Math.floor(parseFloat(durationMatch[3]));
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            
+            // Validate duration is reasonable (between 1 second and 24 hours)
+            if (totalSeconds <= 0 || totalSeconds > 86400) {
+              reject(new Error(`Invalid duration: ${totalSeconds} seconds`));
+              return;
+            }
+            
+            console.log("🎬 Extracted duration:", totalSeconds, "seconds");
+            resolve(totalSeconds);
+          } else {
+            reject(new Error("Could not parse duration from ffmpeg output"));
+          }
+        });
         return;
       }
       
-      const duration = parseFloat(stdout.trim());
+      const duration = Math.floor(metadata.format.duration);
       console.log("🎬 Extracted duration:", duration, "seconds");
+      
+      // Validate duration is reasonable (between 1 second and 24 hours)
+      if (duration <= 0 || duration > 86400) {
+        console.error("Invalid duration detected:", duration);
+        reject(new Error(`Invalid duration: ${duration} seconds`));
+        return;
+      }
+      
       resolve(duration);
     });
   });
@@ -305,15 +347,19 @@ app.post(
     const baseUrl = "http://localhost:5000";
     
     // Extract duration from video file
-    let duration = 0;
+    let duration;
     try {
-      if (videoFile && videoFile.path) {
-        duration = await getVideoDuration(videoFile.path);
-        console.log("🎬 Video duration extracted:", duration);
+      if (!videoFile || !videoFile.path) {
+        throw new Error("Video file not found");
       }
+      
+      duration = await getVideoDuration(videoFile.path);
+      console.log("🎬 Video duration extracted successfully:", duration, "seconds");
     } catch (error) {
-      console.error("Failed to extract duration:", error);
-      // Continue with duration = 0 as fallback
+      console.error("Failed to extract duration:", error.message);
+      return res.status(400).json({ 
+        message: "Unable to process video file. Please ensure the file is a valid video format." 
+      });
     }
 
     const video = new Video({

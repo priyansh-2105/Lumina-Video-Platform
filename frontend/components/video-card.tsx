@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Play } from "lucide-react"
 import { formatDistanceToNow } from "@/utils/format"
-import { formatDuration, isRealisticDuration } from "@/utils/duration"
+import { formatDuration } from "@/utils/duration"
 import type { Video } from "@/types"
 
 interface VideoCardProps {
@@ -56,9 +56,9 @@ export function VideoCard({
           <div className="absolute inset-0 flex items-center justify-center bg-background/20 opacity-0 transition-opacity group-hover:opacity-100">
             <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
           </div>
-          {/* Duration badge - only show for realistic durations */}
-          {isRealisticDuration(duration) && (
-            <div className="absolute bottom-2 right-2 rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium">
+          {/* Duration badge - always show when duration exists */}
+          {duration && duration > 0 && (
+            <div className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
               {formatDuration(duration)}
             </div>
           )}
