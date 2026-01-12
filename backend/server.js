@@ -219,6 +219,29 @@ app.get("/api/videos", async (req, res) => {
   }
 });
 
+app.get("/api/videos/subscriptions-feed", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const subscriptions = user.subscriptions || [];
+
+    if (subscriptions.length === 0) {
+      return res.json([]);
+    }
+
+    // Get videos from subscribed creators
+    const videos = await Video.find({ 
+      creatorId: { $in: subscriptions }
+    }).sort({ createdAt: -1 }).lean();
+
+    res.json(videos.map(ensureVideoShape));
+  } catch (err) {
+    console.error("Subscriptions feed error:", err);
+    res.status(500).json({ message: "Failed to fetch subscriptions" });
+  }
+});
+
 app.get("/api/videos/:id", async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -733,28 +756,6 @@ app.get("/api/users/me/subscriptions", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Get subscriptions error:", err);
     res.status(500).json({ message: "Failed to fetch subscriptions" });
-  }
-});
-
-app.get("/api/videos/subscriptions-feed", requireAuth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const subscriptions = user.subscriptions || [];
-    if (subscriptions.length === 0) {
-      return res.json([]);
-    }
-
-    // Get videos from subscribed creators
-    const videos = await Video.find({ 
-      creatorId: { $in: subscriptions }
-    }).sort({ createdAt: -1 }).lean();
-
-    res.json(videos.map(ensureVideoShape));
-  } catch (err) {
-    console.error("Subscriptions feed error:", err);
-    res.status(500).json({ message: "Failed to fetch subscriptions feed" });
   }
 });
 

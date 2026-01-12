@@ -112,20 +112,20 @@ export default function SubscriptionsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-4">
-                {subscriptions.slice(0, 8).map((creator) => (
-                  <div key={creator.id} className="flex items-center gap-2">
+                {subscriptions.slice(0, 8).map((creator, index) => (
+                  <div key={creator?.id || `creator-${index}`} className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                      {creator.avatar ? (
+                      {creator?.avatar ? (
                         <img 
                           src={creator.avatar} 
-                          alt={creator.name}
+                          alt={creator?.name || 'Creator'}
                           className="w-8 h-8 rounded-full object-cover"
                         />
                       ) : (
                         <Users className="w-4 h-4 text-muted-foreground" />
                       )}
                     </div>
-                    <span className="text-sm font-medium">{creator.name}</span>
+                    <span className="text-sm font-medium">{creator?.name || 'Unknown Creator'}</span>
                   </div>
                 ))}
                 {subscriptions.length > 8 && (

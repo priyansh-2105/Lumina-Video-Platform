@@ -36,19 +36,6 @@ export function Navbar() {
     router.push("/")
   }
 
-  const handleUploadClick = () => {
-    if (!isAuthenticated) {
-      router.push("/login")
-      return
-    }
-    
-    if (user?.role === "creator") {
-      router.push("/creator?tab=upload")
-    } else {
-      router.push("/profile")
-    }
-  }
-
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -76,10 +63,12 @@ export function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden items-center gap-4 md:flex">
-          <Button variant="outline" size="sm" onClick={handleUploadClick}>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload
-          </Button>
+          {isAuthenticated && user && user.role === "creator" ? (
+            <Button variant="outline" size="sm" onClick={() => router.push("/creator?tab=upload")}>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload
+            </Button>
+          ) : null}
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -157,10 +146,12 @@ export function Navbar() {
             </div>
           </form>
           <div className="flex flex-col gap-2">
-            <Button variant="ghost" className="justify-start" onClick={handleUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload
-            </Button>
+            {isAuthenticated && user && user.role === "creator" ? (
+              <Button variant="ghost" className="justify-start" onClick={() => router.push("/creator?tab=upload")}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload
+              </Button>
+            ) : null}
             {isAuthenticated ? (
               <>
                 <div className="flex items-center gap-3 px-2 py-2">
