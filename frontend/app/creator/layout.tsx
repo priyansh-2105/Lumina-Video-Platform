@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { Suspense } from "react"
 
-export default function CreatorLayout({
+function CreatorLayoutContent({
   children,
 }: {
   children: React.ReactNode
@@ -66,5 +67,17 @@ export default function CreatorLayout({
         </div>
       </div>
     </ProtectedRoute>
+  )
+}
+
+export default function CreatorLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <Suspense fallback={<div>Loading creator dashboard...</div>}>
+      <CreatorLayoutContent>{children}</CreatorLayoutContent>
+    </Suspense>
   )
 }

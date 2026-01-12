@@ -8,10 +8,11 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import type { Video } from "@/types"
 
-function SearchParamsWrapper({ children }: { children: (tab: string) => React.JSX.Element }) {
+function CreatorDashboardWithSearchParams({ initialVideos }: { initialVideos: Video[] }) {
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "videos"
-  return children(tab)
+  
+  return <CreatorDashboardClient initialVideos={initialVideos} activeTab={tab} />
 }
 
 function CreatorPageContent() {
@@ -51,9 +52,7 @@ function CreatorPageContent() {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <SearchParamsWrapper>
-        {(tab) => <CreatorDashboardClient initialVideos={initialVideos} activeTab={tab} />}
-      </SearchParamsWrapper>
+      <CreatorDashboardWithSearchParams initialVideos={initialVideos} />
     </Suspense>
   )
 }

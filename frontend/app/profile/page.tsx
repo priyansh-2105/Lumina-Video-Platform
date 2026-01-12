@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/contexts/auth-context"
 import { historyService } from "@/services/api"
-import { formatDuration, formatDistanceToNow } from "@/utils/format"
+import { formatDistanceToNow } from "@/utils/format"
+import { formatDuration } from "@/utils/duration"
 import type { WatchHistoryItem } from "@/types"
 
 export default function ProfilePage() {

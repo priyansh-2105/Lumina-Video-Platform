@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from "react"
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
-import { formatDuration } from "@/utils/format"
+import { formatDuration } from "@/utils/duration"
 import { historyService } from "@/services/api"
 import { useAuth } from "@/contexts/auth-context"
 import type { Video } from "@/types"
@@ -42,7 +42,7 @@ export function VideoPlayer({ video, onFirstPlay }: VideoPlayerProps) {
 
     async function loadProgress() {
       try {
-        const items = await historyService.getHistory(userId)
+        const items = await historyService.getHistory()
         const match = items.find((h) => h.videoId === video.id)
         const savedProgress = match?.progress || 0
 

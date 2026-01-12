@@ -1,9 +1,12 @@
 "use client"
 
+import React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Play } from "lucide-react"
 import { formatDistanceToNow } from "@/utils/format"
+import { formatDuration, isRealisticDuration } from "@/utils/duration"
+import type { Video } from "@/types"
 
 interface VideoCardProps {
   id: string
@@ -26,15 +29,9 @@ export function VideoCard({
   creatorAvatar,
   views,
   duration,
-  createdAt,
-}: VideoCardProps) {
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
-
-  const formatViews = (count: number) => {
+  createdAt
+}: VideoCardProps): React.ReactElement {
+  const formatViews = function(count: number) {
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`
     }
@@ -45,9 +42,10 @@ export function VideoCard({
   }
 
   return (
-    <article className="group">
-      <Link href={`/video/${id}`} className="block">
-        <div className="relative aspect-video overflow-hidden rounded-lg bg-secondary">
+    <article className="group cursor-pointer">
+      <Link href={`/video/${id}`}>
+        <div className="relative aspect-video bg-secondary rounded-lg overflow-hidden">
+          {/* Thumbnail */}
           <Image
             src={thumbnail || "/placeholder.svg?height=180&width=320"}
             alt={title}
@@ -56,14 +54,14 @@ export function VideoCard({
           />
           {/* Play overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-background/20 opacity-0 transition-opacity group-hover:opacity-100">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/90">
-              <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
+            <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
+          </div>
+          {/* Duration badge - only show for realistic durations */}
+          {isRealisticDuration(duration) && (
+            <div className="absolute bottom-2 right-2 rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium">
+              {formatDuration(duration)}
             </div>
-          </div>
-          {/* Duration badge */}
-          <div className="absolute bottom-2 right-2 rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium">
-            {formatDuration(duration)}
-          </div>
+          )}
         </div>
       </Link>
 

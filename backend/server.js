@@ -1,13 +1,13 @@
-
 require("dotenv").config();
 
 const express = require("express");
+const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
-const mongoose = require("mongoose");
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
+const { exec } = require("child_process");
 const connectDB = require("./config/db");
 
 // Initialize DB before anything else
@@ -57,6 +57,23 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+// Function to extract video duration using ffprobe
+async function getVideoDuration(videoPath) {
+  return new Promise((resolve, reject) => {
+    exec(`ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${videoPath}"`, (error, stdout) => {
+      if (error) {
+        console.error("Error getting video duration:", error);
+        reject(error);
+        return;
+      }
+      
+      const duration = parseFloat(stdout.trim());
+      console.log("🎬 Extracted duration:", duration, "seconds");
+      resolve(duration);
+    });
+  });
+}
 
 function getAuthUser(req) {
   const header = req.headers.authorization;
@@ -286,6 +303,19 @@ app.post(
     }
 
     const baseUrl = "http://localhost:5000";
+    
+    // Extract duration from video file
+    let duration = 0;
+    try {
+      if (videoFile && videoFile.path) {
+        duration = await getVideoDuration(videoFile.path);
+        console.log("🎬 Video duration extracted:", duration);
+      }
+    } catch (error) {
+      console.error("Failed to extract duration:", error);
+      // Continue with duration = 0 as fallback
+    }
+
     const video = new Video({
       title,
       description,
@@ -300,7 +330,7 @@ app.post(
       views: 0,
       likes: 0,
       dislikes: 0,
-      duration: 0,
+      duration: duration, // Use extracted duration
     });
 
     try {
